@@ -6,6 +6,8 @@ http://wiki.libvirt.org/page/Live-disk-backup-with-active-blockcommit
 
 The backup script assumes a machine named *vm* is stored in a file named *vm.qcow2*. This is hardcoded but could be modified as the backup method itself doesn't rely on the VM being stored as a *qcow2* file.
 
+The backup script also assumes that the guest agent is installed in all VM. This is hardcoded but could be modified.
+
 ## Dependencies
 
   - libvirt, virsh,... for VM management
