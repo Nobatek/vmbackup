@@ -17,6 +17,7 @@ The backup script also assumes that the guest agent is installed in all VM. This
 
     cp vmbackup vmbackuprotate /usr/local/sbin/
     cp etc/vmbackup.ini /etc/
+    cp etc/cron.daily/vmbackup /etc/cron.daily/
 
 ## Usage
 
