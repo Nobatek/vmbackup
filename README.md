@@ -16,7 +16,7 @@ The backup script also assumes that the guest agent is installed in all VM. This
 ## Installation
 
     cp vmbackup vmbackuprotate /usr/local/sbin/
-    cp vmbackup.ini /etc/
+    cp etc/vmbackup.ini /etc/
 
 ## Usage
 
