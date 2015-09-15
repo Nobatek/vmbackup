@@ -1,0 +1,73 @@
+#!/bin/sh
+
+#####################################
+## Rotate virtual machines backups ##
+#####################################
+
+# Parameters
+# ----------
+
+CONFIG_FILE=/etc/vmbackup.ini
+
+# Exit if cfget not installed
+command -v cfget >/dev/null 2>&1 || { echo >&2 "vmbackuprotate needs cfget, which is not installed on the system. Aborting."; exit 1; }
+
+# Exit if config file missing
+test -f $CONFIG_FILE || { echo >&2 "Missing config file $CONFIG_FILE"; exit 2; }
+
+# Directories
+
+VM_DIR=`cfget -C $CONFIG_FILE vm_dir`
+BAK_DIR=`cfget -C $CONFIG_FILE bak_dir`
+
+# Day of the week for weekly backup (1 is monday, 7 is sunday)
+WEEKLY_DAY_OF_WEEK=`cfget -C $CONFIG_FILE weekly_day_of_week`
+
+# Keep backups for N days
+DAILY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE daily_backups_lifetime`
+WEEKLY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE weekly_backups_lifetime`
+
+# Names of VM to backup
+VM_NAMES=`cfget -C $CONFIG_FILE vm_names`
+
+# Script
+# ------
+
+# Create backup dirs if they don't exist
+
+DAILY_DIR=$BAK_DIR/daily
+WEEKLY_DIR=$BAK_DIR/weekly
+
+mkdir -p $DAILY_DIR
+mkdir -p $WEEKLY_DIR
+
+# Make backups
+
+for vm in $VM_NAMES
+
+do
+
+    echo "Backup $vm..."
+    
+    BAK_FILEPATH="$BAK_DIR/$vm"_`date +%y%m%d`.qcow2
+    vmbackup $VM_DIR $vm $BAK_FILEPATH || { echo >&2 "Backup failed for $vm "; exit 3; }
+    
+    # Move backup to daily directory
+    
+    mv $BAK_FILEPATH $DAILY_DIR
+    
+    # If today is weekly backup, hard link to monthly directory
+    
+    if [ `date +%u` -eq $WEEKLY_DAY_OF_WEEK ]
+    then
+        ln $DAILY_DIR/$FILENAME $WEEKLY_DIR/$FILENAME
+    fi
+
+done
+
+# Get rid of old backups
+
+find $DAILY_DIR -mtime +$DAILY_BACKUPS_LIFETIME  -delete
+find $WEEKLY_DIR -mtime +$WEEKLY_BACKUPS_LIFETIME  -delete
+
+exit 0

@@ -1,0 +1,44 @@
+#!/bin/sh
+
+##############################
+## Backup a virtual machine ##
+##############################
+
+usage ()
+{
+  echo ''
+  echo 'Usage : vmbackup <vm dirpath> <vm name> <backup filepath>'
+  echo '    vm dirpath:      path to directory where VM file is stored'
+  echo '    vm name:         name of VM to backup'
+  echo '    backup filepath: path of backup file to create'
+  echo '    Note: VM file is assumed to be dirpath/name.qcow2'
+  echo ''
+}
+
+# If wrong number of arguments, print usage and exit
+[ $# -ne 3 ] && { usage; exit 1; }
+
+VM_DIR=$1
+VM_NAME=$2
+BAK_FILEPATH=$3
+
+# If VM name invalid, exit
+virsh list --name | grep "^"$VM_NAME"$" > /dev/null || { echo >&2 "Invalid VM name: $VM_NAME"; usage; exit 2; }
+
+# Create snapshot
+echo "Create snapshot for $VM_NAME..."
+virsh snapshot-create-as --domain $VM_NAME snap --diskspec vda,file=$VM_DIR/"$VM_NAME"-snap.qcow2 --disk-only --atomic --no-metadata --quiesce || { echo >&2 "Snapshot creation failed for $VM_NAME. Aborting backup."; exit 3; }
+
+# Copy VM
+echo "Create backup file as $BAK_FILEPATH..."
+cp $VM_DIR/"$VM_NAME".qcow2 $BAK_FILEPATH
+
+# Commit snapshot
+echo "Commit snapshot..."
+virsh blockcommit $VM_NAME vda --active --pivot || { echo >&2 "Snapshot blockcommit failed for $VM_NAME. Keeping snapshot file."; exit 4; }
+
+# Delete snapshot file
+echo "Delete snapshot file..."
+rm $VM_DIR/"$VM_NAME"-snap.qcow2
+
+exit 0
