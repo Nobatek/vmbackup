@@ -16,7 +16,7 @@ The backup script also assumes that the guest agent is installed in all VM. This
 ## Installation
 
     cp vmbackup vmbackuprotate /usr/local/sbin/
-    cp etc/vmbackup.ini /etc/
+    cp etc/vmbackup.conf /etc/
     cp etc/cron.daily/vmbackup /etc/cron.daily/
 
 ## Usage
@@ -35,7 +35,10 @@ vmbackup can be used to backup a single VM.
 
 vmbackuprotate backs up several VM and rotates backups.
 
-Its parameters are passed in vmbackup.ini, which should be self-explanatory.
+       Usage : vmbackuprotate <config file path>
+           config file path: path to configuration file'
+
+Its parameters are passed in vmbackup.conf, which should be self-explanatory.
 
 ## Documentation
 
