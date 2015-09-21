@@ -49,18 +49,19 @@ do
 
     echo "Backup $vm..."
     
-    BAK_FILEPATH="$BAK_DIR/$vm"_`date +%y%m%d`.qcow2
+    BAK_FILENAME="$vm"_`date +%y%m%d`.qcow2
+    BAK_FILEPATH=$BAK_DIR/$BAK_FILENAME
     vmbackup $VM_DIR $vm $BAK_FILEPATH || { echo >&2 "Backup failed for $vm "; exit 3; }
     
     # Move backup to daily directory
     
     mv $BAK_FILEPATH $DAILY_DIR
     
-    # If today is weekly backup, hard link to monthly directory
+    # If today is weekly backup, hard link to "weekly" directory
     
     if [ `date +%u` -eq $WEEKLY_DAY_OF_WEEK ]
     then
-        ln $DAILY_DIR/$FILENAME $WEEKLY_DIR/$FILENAME
+        ln $DAILY_DIR/$BAK_FILENAME $WEEKLY_DIR
     fi
 
 done
