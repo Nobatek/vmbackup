@@ -4,10 +4,21 @@
 ## Rotate virtual machines backups ##
 #####################################
 
+usage ()
+{
+  echo ''
+  echo 'Usage : vmbackuprotate <config file path>'
+  echo '    config file path: path to configuration file'
+  echo ''
+}
+
+# If wrong number of arguments, print usage and exit
+[ $# -ne 1 ] && { usage; exit 1; }
+
+CONFIG_FILE=$1
+
 # Parameters
 # ----------
-
-CONFIG_FILE=/etc/vmbackup.ini
 
 # Exit if cfget not installed
 command -v cfget >/dev/null 2>&1 || { echo >&2 "vmbackuprotate needs cfget, which is not installed on the system. Aborting."; exit 1; }
