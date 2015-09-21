@@ -38,8 +38,7 @@ VM_NAMES=`cfget -C $CONFIG_FILE vm_names`
 DAILY_DIR=$BAK_DIR/daily
 WEEKLY_DIR=$BAK_DIR/weekly
 
-mkdir -p $DAILY_DIR
-mkdir -p $WEEKLY_DIR
+mkdir -p $DAILY_DIR && mkdir -p $WEEKLY_DIR || { echo >&2 "Error creating backup directories. Aborting."; exit 3; }
 
 # Make backups
 
@@ -51,7 +50,7 @@ do
     
     BAK_FILENAME="$vm"_`date +%y%m%d`.qcow2
     BAK_FILEPATH=$BAK_DIR/$BAK_FILENAME
-    vmbackup $VM_DIR $vm $BAK_FILEPATH || { echo >&2 "Backup failed for $vm "; exit 3; }
+    vmbackup $VM_DIR $vm $BAK_FILEPATH || { echo >&2 "Backup failed for $vm "; exit 4; }
     
     # Move backup to daily directory
     
