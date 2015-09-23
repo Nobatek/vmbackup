@@ -17,39 +17,44 @@ usage ()
 
 CONFIG_FILE=$1
 
-# Parameters
+# Parameters
 # ----------
 
-# Exit if cfget not installed
-command -v cfget >/dev/null 2>&1 || { echo >&2 "vmbackuprotate needs cfget, which is not installed on the system. Aborting."; exit 1; }
+# Exit if cfget not installed
+command -v cfget >/dev/null 2>&1 || { echo >&2 "vmbackuprotate needs cfget, which is not installed on the system. Aborting."; exit 2; }
 
 # Exit if config file missing
-test -f $CONFIG_FILE || { echo >&2 "Missing config file $CONFIG_FILE"; exit 2; }
+test -f $CONFIG_FILE || { echo >&2 "Missing config file $CONFIG_FILE"; exit 3; }
 
-# Directories
+# Directories
 
-VM_DIR=`cfget -C $CONFIG_FILE vm_dir`
-BAK_DIR=`cfget -C $CONFIG_FILE bak_dir`
+VM_DIR=`cfget -C $CONFIG_FILE vm_dir 2>/dev/null` || { echo >&2 "Missing parameter vm_dir in $CONFIG_FILE"; exit 3; }
+BAK_DIR=`cfget -C $CONFIG_FILE bak_dir 2>/dev/null` || { echo >&2 "Missing parameter bak_dir in $CONFIG_FILE"; exit 3; }
 
-# Day of the week for weekly backup (1 is monday, 7 is sunday)
-WEEKLY_DAY_OF_WEEK=`cfget -C $CONFIG_FILE weekly_day_of_week`
+# Day of the week for weekly backup (1 is monday, 7 is sunday)
+WEEKLY_DAY_OF_WEEK=`cfget -C $CONFIG_FILE weekly_day_of_week` 2>/dev/null || WEEKLY_DAY_OF_WEEK=7
 
-# Keep backups for N days
-DAILY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE daily_backups_lifetime`
-WEEKLY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE weekly_backups_lifetime`
+# Keep backups for N days
+DAILY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE daily_backups_lifetime 2>/dev/null` || DAILY_BACKUPS_LIFETIME=7
+WEEKLY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE weekly_backups_lifetime 2>/dev/null` || WEEKLY_BACKUPS_LIFETIME=30
 
 # Names of VM to backup
-VM_NAMES=`cfget -C $CONFIG_FILE vm_names`
+# (if not found in config file, no VM to backup)
+VM_NAMES=`cfget -C $CONFIG_FILE vm_names 2>/dev/null`
 
-# Script
-# ------
+# Remote directories to synchronize
+# (if not found in config file, no remote dir to synchronize)
+REMOTE_DIRS=`cfget -C $CONFIG_FILE remote_dirs 2>/dev/null`
+
+# Script
+# ------
 
 # Create backup dirs if they don't exist
 
 DAILY_DIR=$BAK_DIR/daily
 WEEKLY_DIR=$BAK_DIR/weekly
 
-mkdir -p $DAILY_DIR && mkdir -p $WEEKLY_DIR || { echo >&2 "Error creating backup directories. Aborting."; exit 3; }
+mkdir -p $DAILY_DIR && mkdir -p $WEEKLY_DIR || { echo >&2 "Error creating backup directories. Aborting."; exit 4; }
 
 # Make backups
 
@@ -58,17 +63,17 @@ for vm in $VM_NAMES
 do
 
     echo "Backup $vm..."
-    
+
     BAK_FILENAME="$vm"_`date +%y%m%d`.qcow2
     BAK_FILEPATH=$BAK_DIR/$BAK_FILENAME
-    vmbackup $VM_DIR $vm $BAK_FILEPATH || { echo >&2 "Backup failed for $vm "; exit 4; }
-    
-    # Move backup to daily directory
-    
+    vmbackup $VM_DIR $vm $BAK_FILEPATH || { echo >&2 "Backup failed for $vm "; continue; }
+
+    # Move backup to daily directory
+
     mv $BAK_FILEPATH $DAILY_DIR
-    
-    # If today is weekly backup, hard link to "weekly" directory
-    
+
+    # If today is weekly backup, hard link to "weekly" directory
+
     if [ `date +%u` -eq $WEEKLY_DAY_OF_WEEK ]
     then
         ln $DAILY_DIR/$BAK_FILENAME $WEEKLY_DIR
@@ -76,9 +81,20 @@ do
 
 done
 
-# Get rid of old backups
+# Get rid of old backups
 
 find $DAILY_DIR -mtime +$DAILY_BACKUPS_LIFETIME  -delete
 find $WEEKLY_DIR -mtime +$WEEKLY_BACKUPS_LIFETIME  -delete
+
+# Synchronize remote directories
+for remote in $REMOTE_DIRS
+
+do
+
+    echo "Synchronize $remote..."
+
+    rsync -a -H --delete --progress $BAK_DIR/ $remote || { echo >&2 "Synchronization failed for $remote"; continue; }
+
+done
 
 exit 0
