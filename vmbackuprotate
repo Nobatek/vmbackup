@@ -27,7 +27,6 @@ command -v cfget >/dev/null 2>&1 || { echo >&2 "vmbackuprotate needs cfget, whic
 test -f $CONFIG_FILE || { echo >&2 "Missing config file $CONFIG_FILE"; exit 3; }
 
 # Directories
-
 VM_DIR=`cfget -C $CONFIG_FILE vm_dir 2>/dev/null` || { echo >&2 "Missing parameter vm_dir in $CONFIG_FILE"; exit 3; }
 BAK_DIR=`cfget -C $CONFIG_FILE bak_dir 2>/dev/null` || { echo >&2 "Missing parameter bak_dir in $CONFIG_FILE"; exit 3; }
 
@@ -64,16 +63,15 @@ do
 
     echo "Backup $vm..."
 
+    # Backup VM
     BAK_FILENAME="$vm"_`date +%y%m%d`.qcow2
     BAK_FILEPATH=$BAK_DIR/$BAK_FILENAME
     vmbackup $VM_DIR $vm $BAK_FILEPATH || { echo >&2 "Backup failed for $vm "; continue; }
 
     # Move backup to daily directory
-
     mv $BAK_FILEPATH $DAILY_DIR
 
     # If today is weekly backup, hard link to "weekly" directory
-
     if [ `date +%u` -eq $WEEKLY_DAY_OF_WEEK ]
     then
         ln $DAILY_DIR/$BAK_FILENAME $WEEKLY_DIR
@@ -87,6 +85,7 @@ find $DAILY_DIR -mtime +$DAILY_BACKUPS_LIFETIME  -delete
 find $WEEKLY_DIR -mtime +$WEEKLY_BACKUPS_LIFETIME  -delete
 
 # Synchronize remote directories
+
 for remote in $REMOTE_DIRS
 
 do
