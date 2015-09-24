@@ -15,6 +15,13 @@ usage ()
   echo ''
 }
 
+# Check VM name is valid and return VM state
+check_vm_state ()
+{
+  VM=$1
+  virsh dominfo $VM | sed -n 's/State: *//p' || { echo >&2 "$VM domain info invalid"; exit 1; }
+}
+
 # If wrong number of arguments, print usage and exit
 [ $# -ne 3 ] && { usage; exit 1; }
 
@@ -22,23 +29,50 @@ VM_DIR=$1
 VM_NAME=$2
 BAK_FILEPATH=$3
 
-# If VM name invalid, exit
+# If VM name invalid, exit
 virsh list --name | grep "^"$VM_NAME"$" > /dev/null || { echo >&2 "Invalid VM name: $VM_NAME"; usage; exit 2; }
 
-# Create snapshot
-echo "Create snapshot for $VM_NAME..."
-virsh snapshot-create-as --domain $VM_NAME snap --diskspec vda,file=$VM_DIR/"$VM_NAME"-snap.qcow2 --disk-only --atomic --no-metadata --quiesce || { echo >&2 "Snapshot creation failed for $VM_NAME. Aborting backup."; exit 3; }
+# Check VM state ('running', 'paused', 'shut off' are managed)
+VM_STATE=$(check_vm_state $VM_NAME) || { echo "$VM_NAME state check failed."; exit 3; }
+echo "$VM_NAME is $VM_STATE"
 
-# Copy VM
+# If VM in invalid state, exit
+if [ "$VM_STATE" != "running" ] && [ "$VM_STATE" != "paused" ] && [ "$VM_STATE" != "shut off" ]; then
+  echo >&2 "$VM_NAME in invalid state $VM_STATE"; exit 3
+fi
+
+# If VM is running, create snapshot
+
+if [ "$VM_STATE" = "running" ]; then
+
+  # Create snapshot
+  echo "Create snapshot for $VM_NAME..."
+  virsh snapshot-create-as --domain $VM_NAME snap --diskspec vda,file=$VM_DIR/"$VM_NAME"-snap.qcow2 --disk-only --atomic --no-metadata --quiesce || { echo >&2 "Snapshot creation failed for $VM_NAME. Aborting backup."; exit 4; }
+
+fi
+
+# Whatever the state, copy VM file
+
 echo "Create backup file as $BAK_FILEPATH..."
 cp $VM_DIR/"$VM_NAME".qcow2 $BAK_FILEPATH
 
-# Commit snapshot
-echo "Commit snapshot..."
-virsh blockcommit $VM_NAME vda --active --pivot || { echo >&2 "Snapshot blockcommit failed for $VM_NAME. Keeping snapshot file."; exit 4; }
+# If VM is running, commit and delete snapshot
 
-# Delete snapshot file
-echo "Delete snapshot file..."
-rm $VM_DIR/"$VM_NAME"-snap.qcow2
+if [ "$VM_STATE" = "running" ]; then
+
+  # Commit snapshot
+  echo "Commit snapshot..."
+  virsh blockcommit $VM_NAME vda --active --pivot || { echo >&2 "Snapshot blockcommit failed for $VM_NAME. Keeping snapshot file."; exit 5; }
+
+  # Delete snapshot file
+  echo "Delete snapshot file..."
+  rm $VM_DIR/"$VM_NAME"-snap.qcow2
+
+fi
+
+# Check state has not changed
+if [ "$(check_vm_state $VM_NAME)" != "$VM_STATE" ]; then
+      echo >&2 "$VM_NAME state has changed during backup. Backup file $BAK_FILEPATH might not be reliable."; exit 6
+fi
 
 exit 0

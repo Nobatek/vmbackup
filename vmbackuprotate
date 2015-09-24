@@ -92,9 +92,9 @@ do
 
     echo "Synchronize $remote..."
 
-    # A 'vmbackup' directory is created in each remote dir
-    # Hardcoding a subdirectory name is not elegant, but it is a simple measure to avoid wreaking havoc
-    # in the system if entering / as remote dir by mistake in the config file.
+    # A 'vmbackup' directory is created in each remote dir
+    # Hardcoding a subdirectory name is not elegant, but it is a simple measure to avoid wreaking havoc
+    # in the system if entering / as remote dir by mistake in the config file.
     rsync -a -H --delete --progress $BAK_DIR/ $remote/vmbackup || { echo >&2 "Synchronization failed for $remote"; continue; }
 
 done
