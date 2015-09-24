@@ -1,5 +1,4 @@
 #!/bin/sh
 
 test -x /usr/local/sbin/vmbackuprotate || exit 0
-/usr/local/sbin/vmbackuprotate /etc/vmbackup.conf
-
+/usr/local/sbin/vmbackuprotate /etc/vmbackup.conf >/dev/null
