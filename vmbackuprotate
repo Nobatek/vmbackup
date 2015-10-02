@@ -33,9 +33,10 @@ BAK_DIR=`cfget -C $CONFIG_FILE bak_dir 2>/dev/null` || { echo >&2 "Missing param
 # Day of the week for weekly backup (1 is monday, 7 is sunday)
 WEEKLY_DAY_OF_WEEK=`cfget -C $CONFIG_FILE weekly_day_of_week` 2>/dev/null || WEEKLY_DAY_OF_WEEK=7
 
-# Keep backups for N days
+# Keep daily backups for N days
 DAILY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE daily_backups_lifetime 2>/dev/null` || DAILY_BACKUPS_LIFETIME=7
-WEEKLY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE weekly_backups_lifetime 2>/dev/null` || WEEKLY_BACKUPS_LIFETIME=30
+# Keep weekly backups for N weeks
+WEEKLY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE weekly_backups_lifetime 2>/dev/null` || WEEKLY_BACKUPS_LIFETIME=4
 
 # Names of VM to backup
 # (if not found in config file, no VM to backup)
@@ -80,9 +81,16 @@ do
 done
 
 # Get rid of old backups
+# LIFETIME = 0 means "do not delete backups, keep them permanently"
+# The script does not run every week at the exact same time of day, so we
+# subtract 6 hours to deal with this approximation
+if [ $DAILY_BACKUPS_LIFETIME > 0 ]; then
+    find $DAILY_DIR -mmin +$(( ($DAILY_BACKUPS_LIFETIME * 24 - 6 ) * 60 )) -delete
+fi
 
-find $DAILY_DIR -mtime +$DAILY_BACKUPS_LIFETIME  -delete
-find $WEEKLY_DIR -mtime +$WEEKLY_BACKUPS_LIFETIME  -delete
+if [ $WEEKLY_BACKUPS_LIFETIME > 0 ]; then
+    find $WEEKLY_DIR -mmin +$(( ($WEEKLY_BACKUPS_LIFETIME * 7 * 24 - 6 ) * 60 )) -delete
+fi
 
 # Synchronize remote directories
 
