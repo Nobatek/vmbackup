@@ -70,9 +70,12 @@ if [ "$VM_STATE" = "running" ]; then
 
 fi
 
-# Check state has not changed
-if [ "$(check_vm_state $VM_NAME)" != "$VM_STATE" ]; then
-      echo >&2 "$VM_NAME state has changed during backup. Backup file $BAK_FILEPATH might not be reliable."; exit 6
+# Check state has not changed during backup
+NEW_VM_STATE=$(check_vm_state $VM_NAME)
+if [ "$NEW_VM_STATE" != "$VM_STATE" ]; then
+      echo >&2 "$VM_NAME state has changed from $VM_STATE to $NEW_VM_STATE during backup."
+      echo >&2 "Backup file $BAK_FILEPATH might not be reliable."
+      exit 6
 fi
 
 exit 0
