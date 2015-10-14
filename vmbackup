@@ -54,7 +54,7 @@ fi
 # Whatever the state, copy VM file
 
 echo "Create backup file as $BAK_FILEPATH..."
-cp $VM_DIR/"$VM_NAME".qcow2 $BAK_FILEPATH
+cp --sparse=always $VM_DIR/"$VM_NAME".qcow2 $BAK_FILEPATH
 
 # If VM is running, commit and delete snapshot
 
