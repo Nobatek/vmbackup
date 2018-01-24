@@ -30,7 +30,7 @@ VM_NAME=$2
 BAK_FILEPATH=$3
 
 # If VM name invalid, exit
-virsh list --name | grep "^"$VM_NAME"$" > /dev/null || { echo >&2 "Invalid VM name: $VM_NAME"; usage; exit 2; }
+virsh list --all --name | grep "^"$VM_NAME"$" > /dev/null || { echo >&2 "Invalid VM name: $VM_NAME"; usage; exit 2; }
 
 # Check VM state ('running', 'paused', 'shut off' are managed)
 VM_STATE=$(check_vm_state $VM_NAME) || { echo "$VM_NAME state check failed."; exit 3; }
