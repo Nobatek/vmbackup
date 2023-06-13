@@ -19,7 +19,7 @@ usage ()
 check_vm_state ()
 {
   VM=$1
-  virsh dominfo $VM | sed -n 's/State: *//p' || { echo >&2 "$VM domain info invalid"; exit 1; }
+  LANG=en_GB virsh dominfo $VM | sed -n 's/State: *//p' || { echo >&2 "$VM domain info invalid"; exit 1; }
 }
 
 # If wrong number of arguments, print usage and exit
