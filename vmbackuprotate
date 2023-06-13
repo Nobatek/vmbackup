@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #####################################
 ## Rotate virtual machines backups ##
@@ -15,36 +15,38 @@ usage ()
 # If wrong number of arguments, print usage and exit
 [ $# -ne 1 ] && { usage; exit 1; }
 
-CONFIG_FILE=$1
 
 # Parameters
 # ----------
 
-# Exit if cfget not installed
-command -v cfget >/dev/null 2>&1 || { echo >&2 "vmbackuprotate needs cfget, which is not installed on the system. Aborting."; exit 2; }
-
-# Exit if config file missing
-test -f $CONFIG_FILE || { echo >&2 "Missing config file $CONFIG_FILE"; exit 3; }
-
-# Directories
-VM_DIR=`cfget -C $CONFIG_FILE vm_dir 2>/dev/null` || { echo >&2 "Missing parameter vm_dir in $CONFIG_FILE"; exit 3; }
-BAK_DIR=`cfget -C $CONFIG_FILE bak_dir 2>/dev/null` || { echo >&2 "Missing parameter bak_dir in $CONFIG_FILE"; exit 3; }
+# Default values
 
 # Day of the week for weekly backup (1 is monday, 7 is sunday)
-WEEKLY_DAY_OF_WEEK=`cfget -C $CONFIG_FILE weekly_day_of_week` 2>/dev/null || WEEKLY_DAY_OF_WEEK=7
+WEEKLY_DAY_OF_WEEK=7
 
 # Keep daily backups for N days
-DAILY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE daily_backups_lifetime 2>/dev/null` || DAILY_BACKUPS_LIFETIME=7
+DAILY_BACKUPS_LIFETIME=7
+
 # Keep weekly backups for N weeks
-WEEKLY_BACKUPS_LIFETIME=`cfget -C $CONFIG_FILE weekly_backups_lifetime 2>/dev/null` || WEEKLY_BACKUPS_LIFETIME=4
+WEEKLY_BACKUPS_LIFETIME=4
 
 # Names of VM to backup
 # (if not found in config file, no VM to backup)
-VM_NAMES=`cfget -C $CONFIG_FILE vm_names 2>/dev/null`
+VM_NAMES=""
 
 # Remote directories to synchronize
 # (if not found in config file, no remote dir to synchronize)
-REMOTE_DIRS=`cfget -C $CONFIG_FILE remote_dirs 2>/dev/null`
+REMOTE_DIRS=""
+
+
+# Source config file (overrides defaults)
+source $1
+
+
+## Check directories are defined (no default values for those)
+if [[ -z $VM_DIR ]]; then { echo >&2 "Missing parameter VM_DIR in config file"; exit 3; }; fi
+if [[ -z $BAK_DIR ]]; then { echo >&2 "Missing parameter BAK_DIR in config file"; exit 3; }; fi
+
 
 # Script
 # ------
@@ -84,11 +86,11 @@ done
 # LIFETIME = 0 means "do not delete backups, keep them permanently"
 # The script does not run every week at the exact same time of day, so we
 # subtract 6 hours to deal with this approximation
-if [ $DAILY_BACKUPS_LIFETIME > 0 ]; then
+if [ $DAILY_BACKUPS_LIFETIME -gt 0 ]; then
     find $DAILY_DIR -mmin +$(( ($DAILY_BACKUPS_LIFETIME * 24 - 6 ) * 60 )) -delete
 fi
 
-if [ $WEEKLY_BACKUPS_LIFETIME > 0 ]; then
+if [ $WEEKLY_BACKUPS_LIFETIME -gt 0 ]; then
     find $WEEKLY_DIR -mmin +$(( ($WEEKLY_BACKUPS_LIFETIME * 7 * 24 - 6 ) * 60 )) -delete
 fi
 
